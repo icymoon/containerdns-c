@@ -47,6 +47,7 @@ deps:
 kdns:
 	$(Q)cd core && $(MAKE) O=$(RTE_TARGET)
 	$(Q)cd src && $(MAKE) O=$(RTE_TARGET)
+	$(Q)test -d $(bindir)|| mkdir -p $(bindir)
 	$(Q)cp -a $(CURDIR)/src/$(RTE_TARGET)/kdns $(bindir)/kdns
 
 .PHONY: bin
