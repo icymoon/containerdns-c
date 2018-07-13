@@ -111,7 +111,7 @@ common_config_init(struct rte_cfgfile *cfgfile, struct comm_config *cfg){
     if (entry) {
          cfg->ssl_enable = parser_read_arg_bool(entry);   
     }else{
-        printf("Cannot read COMMON/ssl-enable = %s.\n", entry);
+        printf("Cannot read COMMON/ssl-enable.\n");
         exit(-1); 
     }
 
@@ -119,14 +119,14 @@ common_config_init(struct rte_cfgfile *cfgfile, struct comm_config *cfg){
     if (entry) {
          cfg->key_pem_file = strdup(entry);   
     }else{
-        printf("Cannot read COMMON/key-pem-file = %s.\n", entry);
+        printf("Cannot read COMMON/key-pem-file.\n");
         exit(-1); 
     }
     entry = rte_cfgfile_get_entry(cfgfile, "COMMON", "cert-pem-file");
     if (entry) {
          cfg->cert_pem_file = strdup(entry);   
     }else{
-        printf("Cannot read COMMON/cert-pem-file = %s.\n", entry);
+        printf("Cannot read COMMON/cert-pem-file.\n");
         exit(-1); 
     }
 
@@ -134,7 +134,7 @@ common_config_init(struct rte_cfgfile *cfgfile, struct comm_config *cfg){
     if (entry){
         cfg->zones = strdup(entry);
     }else {
-        printf("Cannot read COMMON/zones = %s.\n", entry);
+        printf("Cannot read COMMON/zones.\n");
         exit(-1);
     }
 }
