@@ -12,7 +12,7 @@
 
 支持的OS发行版本: Centos-7.2或者Centos-7.4，第一次编译make all，之后可以只编译编译kdns（make kdns）。
 
-```
+```bash
 tar -xf kdns.tar.gz
 cd kdns
 make all
@@ -90,22 +90,26 @@ insmod ./bin/rte_kni.ko
 
 ### 1. 增加域名数据
 
+```bash
 curl -H "Content-Type:application/json;charset=UTF-8" -X POST -d '{"type":"A","zoneName":"example.com","domainName":"chen.example.com","host":"192.168.2.2"}'  'http://127.0.0.1:5500/kdns/domain' 
 
 curl -H "Content-Type:application/json;charset=UTF-8" -X POST -d '{"type":"CNAME","zoneName":"example.com","domainName":"chen.cname.example.com","host":"chen.example.com"}' 'http://127.0.0.1:5500/kdns/domain' 
 
-curl -H "Content-Type:application/json;charset=UTF-8" -X POST -d '{"type":"SRV","zoneName":"example.com","domainName":"_srvtcp._tcp.example.com","host":"chen.example.com","priority":20,"weight":50,"port":8800}  'http://127.0.0.1:5500/kdns/domain' 
+curl -H "Content-Type:application/json;charset=UTF-8" -X POST -d '{"type":"SRV","zoneName":"example.com","domainName":"_srvtcp._tcp.example.com","host":"chen.example.com","priority":20,"weight":50,"port":8800}'  'http://127.0.0.1:5500/kdns/domain'
+```
 
 ### 2. 查询域名信息
 
-
-curl -H "Content-Type:application/json;charset=UTF-8" -X GET   'http://127.0.0.1:5500/kdns/perdomain/chen.example.com.' 
+```bash
+curl -H "Content-Type:application/json;charset=UTF-8" -X GET   'http://127.0.0.1:5500/kdns/perdomain/chen.example.com' 
 curl -H "Content-Type:application/json;charset=UTF-8" -X GET   'http://127.0.0.1:5500/kdns/domain' 
+```
 
 ### 3. 查看统计信息
 
+```bash
 curl -H "Content-Type:application/json;charset=UTF-8" -X GET   'http://127.0.0.1:5500/kdns/statistics/get'
-
+```
 
 ## 性能数据
 
