@@ -238,6 +238,7 @@ int domaindata_srv_insert(struct  domain_store *db,char *zone_name,char *domian_
     domain_type* owner = domain_table_insert(db->domains,hostDomain,maxAnswer);//domain_table_find 
     if (owner == NULL){
        log_msg(LOG_ERR,"err can not find domian : %s\n",host);
+       goto error;
     }
 
     rr_insert->rdatas[rr_insert->rdata_count].domain = owner;
@@ -252,8 +253,10 @@ int domaindata_srv_insert(struct  domain_store *db,char *zone_name,char *domian_
         return 0;
     }
 
+error:
+    free(rr_insert->rdatas);
+    free(rr_insert);
     return -1;
-
 }
 
 int domaindata_srv_delete(struct  domain_store *db,char *zone_name,char *domian_name, char * host,uint16_t prio,uint16_t weight,

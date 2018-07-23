@@ -297,7 +297,7 @@ int remote_sock_init(char * fwd_addrs, char * fwd_def_addr,int fwd_threads){
          if (setsockopt(*remote_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {  
              
              log_msg(LOG_ERR,"socket option  SO_RCVTIMEO not support\n");  
-             return -1;  
+             exit(-1);  
          } 
 
          pthread_create(thread_id, NULL, thread_fwd_pkt_process, (void*)remote_sock);
@@ -366,13 +366,18 @@ static int dns_do_remote_query(int remote_sock_t, char *buf,ssize_t len,dns_addr
     int remote_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP); 
     struct timeval tv = {2, 0};
     
+    if (remote_sock == -1) {
+        return -1;
+    }
     if (setsockopt(remote_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {  
         
         log_msg(LOG_ERR,"socket option  SO_RCVTIMEO not support\n");  
+        close(remote_sock);
         return -1;  
     } 
      if (-1 == sendto(remote_sock, buf, len, 0,id_addr->addr,id_addr->addrlen)){
         log_msg(LOG_ERR,"send err\n");
+        close(remote_sock);
         return -1;
      }
      struct sockaddr src_addr;
