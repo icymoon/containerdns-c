@@ -103,7 +103,7 @@ packet_encode_rrset(kdns_query_st *query, domain_type *owner,
 {
 	uint16_t i;
 	uint16_t added = 0;  
-	static int round_robin_off = 0;
+	static uint16_t round_robin_off = 0;
 	int do_robin = (round_robin && section == ANSWER_SECTION);
 	uint16_t start;
     uint32_t maxAnswer = 65535;
