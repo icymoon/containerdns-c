@@ -40,5 +40,7 @@ int domaindata_cname_insert(struct  domain_store *db,char *zone_name,char *domia
 int domaindata_cname_delete(struct  domain_store *db,char *zone_name,char *domian_name);
 int domaindata_a_insert(struct  domain_store *db,char *zone_name,char *domian_name, char * ip_addr, uint32_t ttl,uint32_t maxAnswer );
 int domaindata_a_delete(struct  domain_store *db,char *zone_name,char *domian_name,char * ip_addr, uint32_t ttl);
+int domaindata_ptr_insert(struct domain_store *db, char *zone_name, char *domian_name, char *host, uint32_t ttl, uint32_t maxAnswer);
+int domaindata_ptr_delete(struct domain_store *db, char *zone_name, char *domian_name, char *host, uint32_t ttl, uint32_t maxAnswer);
 
 #endif

@@ -318,12 +318,14 @@ static void* domaindata_parse(enum db_action   action,struct connection_info_str
     snprintf(update->type_str, strlen(value)+1, "%s", value);
     if (strcmp(update->type_str, "A") == 0) {
         update->type = TYPE_A;
+    }else if (strcmp(update->type_str, "PTR") == 0) {
+        update->type = TYPE_PTR;
     }else if (strcmp(update->type_str, "CNAME") == 0) {
         update->type = TYPE_CNAME;
     }else if (strcmp(update->type_str, "SRV") == 0) {
         update->type = TYPE_SRV;
-    }else{
-         log_msg(LOG_ERR,"type not support!");
+    }else {
+        log_msg(LOG_ERR,"type not support!");
         json_decref(json_response);
         goto parse_err;
     }
@@ -342,20 +344,17 @@ static void* domaindata_parse(enum db_action   action,struct connection_info_str
                goto parse_err;
            }
            snprintf(update->host, strlen(value)+1, "%s", value);     
-    }
-    if (update->type == TYPE_CNAME){
+    } else if (update->type == TYPE_PTR || update->type == TYPE_CNAME){
         /* get host */
        json_key = json_object_get(json_response, "host");
        if (!json_key || !json_is_string(json_key))  {
-           log_msg(LOG_ERR,"ipAddr does not exist or is not string!");
+           log_msg(LOG_ERR,"host does not exist or is not string!");
            json_decref(json_response);
            goto parse_err;
        }
        value = json_string_value(json_key);
        snprintf(update->host, strlen(value)+1, "%s", value);     
-    }  
-
-    if (update->type == TYPE_SRV){
+    } else if (update->type == TYPE_SRV){
         /* get host  */
        json_key = json_object_get(json_response, "host");
        if (!json_key || !json_is_string(json_key))  {
@@ -392,7 +391,6 @@ static void* domaindata_parse(enum db_action   action,struct connection_info_str
             goto parse_err;
         }
         update->port = json_integer_value(json_key);
-       
     } 
 
     send_domain_msg_to_master(update);
@@ -444,6 +442,11 @@ static void* domains_get( __attribute__((unused)) struct connection_info_struct 
                     "domainName", domain_info->domain_name, "host", domain_info->host, "zoneName", domain_info->zone_name,
                     "ttl", domain_info->ttl,"maxAnswer", domain_info->maxAnswer);
                     break;    
+                 case TYPE_PTR:
+                    value = json_pack("{s:s, s:s, s:s, s:s, s:i, s:i}", "type","PTR",
+                    "domainName", domain_info->domain_name, "host", domain_info->host, "zoneName", domain_info->zone_name,
+                    "ttl", domain_info->ttl,"maxAnswer", domain_info->maxAnswer);
+                    break;
                  case TYPE_CNAME:
                     value = json_pack("{s:s, s:s, s:s, s:s, s:i, s:i}", "type","CNAME",
                     "domainName", domain_info->domain_name, "host", domain_info->host, "zoneName", domain_info->zone_name,
@@ -516,6 +519,11 @@ static void* domain_get( __attribute__((unused)) struct connection_info_struct *
                     "domainName", domain_info->domain_name, "host", domain_info->host, "zoneName", domain_info->zone_name,
                     "ttl", domain_info->ttl);
                     break;    
+                 case TYPE_PTR:
+                    value = json_pack("{s:s, s:s, s:s, s:s, s:i}", "type","PTR",
+                    "domainName", domain_info->domain_name, "host", domain_info->host, "zoneName", domain_info->zone_name,
+                    "ttl", domain_info->ttl);
+                    break;
                  case TYPE_CNAME:
                     value = json_pack("{s:s, s:s, s:s, s:s, s:i}", "type","CNAME",
                     "domainName", domain_info->domain_name, "host", domain_info->host, "zoneName", domain_info->zone_name,
