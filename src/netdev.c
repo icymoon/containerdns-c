@@ -205,12 +205,13 @@ static int kni_change_mtu(uint8_t port_id, unsigned new_mtu)
 
 	return 0;
 }
+
 static int kni_alloc(uint8_t port_id)
 {
 	struct rte_kni_conf conf;
-    
-    struct rte_kni_ops ops;
+	struct rte_kni_ops ops;
 	struct rte_eth_dev_info dev_info;
+	struct ether_addr eth_addr;
 
 	/* Clear conf at first */
 	memset(&conf, 0, sizeof(conf));
@@ -232,11 +233,20 @@ static int kni_alloc(uint8_t port_id)
 	ops.config_network_if = kni_config_network_interface;
 
 	master_kni = rte_kni_alloc(kni_mbuf_pool, &conf, &ops);
-
 	if (!master_kni){
-        log_msg(LOG_ERR,"Fail to create kni for port: %d\n", port_id);
+		log_msg(LOG_ERR,"Fail to create kni for port: %d\n", port_id);
 		exit(-1);
-    }
+	}
+
+	rte_eth_macaddr_get(port_id, &eth_addr);
+	int ret = linux_set_if_mac(conf.name, (unsigned char *)&eth_addr);
+	if (ret != 0) {
+		char mac[ETHER_ADDR_FMT_SIZE];
+		ether_format_addr(mac, ETHER_ADDR_FMT_SIZE, &eth_addr);
+		log_msg(LOG_ERR, "Fail to set mac %s for %s: %s\n", mac, conf.name, strerror(errno));
+		exit(-1);
+	}
+
 	return 0;
 }
 

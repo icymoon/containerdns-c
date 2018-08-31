@@ -254,4 +254,69 @@ strlcpy(char *dst, const char *src, size_t siz)
 	return(s - src - 1);	/* count does not include NUL */
 }
 
+int linux_set_if_mac(const char *ifname, const unsigned char mac[ETH_ALEN])
+{
+    int fd;
+    struct ifreq ifr;
 
+    if (!ifname || strlen(ifname) >= IFNAMSIZ || !mac) {
+        return -1;
+    }
+
+    fd = socket(PF_INET, SOCK_DGRAM, 0);
+    if (fd < 0) {
+        perror("socket");
+        return -1;
+    }
+
+    memset(&ifr, 0, sizeof(ifr));
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", ifname);
+    ifr.ifr_hwaddr.sa_family = 1;
+    memcpy(ifr.ifr_hwaddr.sa_data, mac, ETH_ALEN);
+    if (ioctl(fd, SIOCSIFHWADDR, &ifr)) {
+        perror("ioctl SIOCSIFHWADDR");
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+    return 0;
+}
+
+int linux_set_if_ip(const char *ifname, const char *ip)
+{
+    int fd;
+    struct ifreq ifr;
+    struct sockaddr_in *addr;
+
+    if (!ifname || strlen(ifname) >= IFNAMSIZ || !ip) {
+        return -1;
+    }
+
+    fd = socket(PF_INET, SOCK_DGRAM, 0);
+    if (fd < 0) {
+        perror("socket");
+        return -1;
+    }
+
+    memset(&ifr, 0, sizeof(ifr));
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", ifname);
+    addr = (struct sockaddr_in *)&(ifr.ifr_addr);
+    addr->sin_family = AF_INET;
+    addr->sin_addr.s_addr = inet_addr(ip);
+    if (ioctl(fd, SIOCSIFADDR, &ifr)) {
+        perror("ioctl SIOCSIFADDR");
+        close(fd);
+        return -1;
+    }
+
+    ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
+    if (ioctl(fd, SIOCSIFFLAGS, &ifr)) {
+        perror("ioctl SIOCSIFFLAGS");
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+    return 0;
+}
