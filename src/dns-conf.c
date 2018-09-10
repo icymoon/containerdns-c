@@ -233,6 +233,8 @@ config_file_load( char *cfgfile_path, char *proc_name) {
     dpdk_config_init(cfgfile, &g_dns_cfg->dpdk, proc_name);
     netdev_config_init(cfgfile, &g_dns_cfg->netdev);
     common_config_init(cfgfile, &g_dns_cfg->comm);
+
+    rte_cfgfile_close(cfgfile);
 }
 
 
