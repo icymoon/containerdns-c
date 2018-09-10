@@ -127,8 +127,13 @@ static void *dns_tcp_process(void *arg) {
 
     query_tcp = query_create();
     
-    sleep(30);
-  
+    sleep(3);
+    int ret = linux_set_if_ip(g_dns_cfg->netdev.name_prefix, ip);
+    if (ret != 0) {
+        log_msg(LOG_ERR, "Fail to set ip %s for %s: %s\n", ip, g_dns_cfg->netdev.name_prefix, strerror(errno));
+        exit(-1);
+    }
+
     sock_descriptor = socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
     bzero(&sin,sizeof(sin)); 
     sin.sin_family = AF_INET; 
