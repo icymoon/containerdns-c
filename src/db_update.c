@@ -238,6 +238,7 @@ int domaindata_srv_insert(struct  domain_store *db,char *zone_name,char *domian_
     domain_type* owner = domain_table_insert(db->domains,hostDomain,maxAnswer);//domain_table_find 
     if (owner == NULL){
        log_msg(LOG_ERR,"err can not find domian : %s\n",host);
+       goto error;
     }
 
     rr_insert->rdatas[rr_insert->rdata_count].domain = owner;
@@ -252,8 +253,10 @@ int domaindata_srv_insert(struct  domain_store *db,char *zone_name,char *domian_
         return 0;
     }
 
+error:
+    free(rr_insert->rdatas);
+    free(rr_insert);
     return -1;
-
 }
 
 int domaindata_srv_delete(struct  domain_store *db,char *zone_name,char *domian_name, char * host,uint16_t prio,uint16_t weight,
@@ -358,6 +361,70 @@ int domaindata_cname_delete(struct  domain_store *db,char *zone_name,char *domia
    return do_domaindata_delete_all(db,zo,dname);
 }
 
+int domaindata_ptr_insert(struct domain_store *db, char *zone_name, char *domian_name, char *host, uint32_t ttl, uint32_t maxAnswer) {
+    const domain_name_st *zname = domain_name_parse((const char*)zone_name);
+    const domain_name_st *hostDomain = domain_name_parse((const char *)host);
+    /* find zone to go with it, or create it */
+    zone_type * zo = domain_store_find_zone(db, zname);
+    if (!zo) {
+        log_msg(LOG_ERR," not find the zone\n");
+        return -1;
+    }
+
+    rr_type *rr_insert      = (rr_type *)xalloc(sizeof(rr_type));
+    rr_insert->klass        = CLASS_IN;
+    rr_insert->type         = TYPE_PTR;
+    rr_insert->ttl          = ttl;
+    rr_insert->rdata_count  = 0;
+    rr_insert->rdatas       = xalloc_array_zero( MAXRDATALEN, sizeof(rdata_atom_type));
+
+    domain_type* owner = domain_table_insert(db->domains, hostDomain, maxAnswer);//domain_table_find
+    if (owner == NULL) {
+       log_msg(LOG_ERR,"err can not find domian : %s\n", host);
+    }
+    rr_insert->rdatas[rr_insert->rdata_count].domain = owner;
+    owner->usage++; /* new reference to domain */
+    ++rr_insert->rdata_count;
+
+    const domain_name_st *dname = domain_name_parse((const char*)domian_name);
+    rrset_type *rrset = do_domaindata_insert(db, zo, dname, rr_insert, maxAnswer);
+    if (rrset != NULL) {
+        return 0;
+    }
+
+    return -1;
+}
+
+int domaindata_ptr_delete(struct domain_store *db, char *zone_name, char *domian_name, char *host, uint32_t ttl, uint32_t maxAnswer) {
+    const domain_name_st *zname = domain_name_parse((const char*)zone_name);
+    const domain_name_st *hostDomain = domain_name_parse((const char*)host);
+    /* find zone to go with it, or create it */
+    zone_type * zo = domain_store_find_zone(db, zname);
+    if (!zo) {
+        log_msg(LOG_ERR," not find the zone\n");
+        return -1;
+    }
+
+    rr_type *rr_del         = (rr_type *)xalloc(sizeof(rr_type));
+    rr_del->klass           = CLASS_IN;
+    rr_del->type            = TYPE_PTR;
+    rr_del->ttl             = ttl;
+    rr_del->rdata_count     = 0;
+    rr_del->rdatas          = xalloc_array_zero(MAXRDATALEN, sizeof(rdata_atom_type));
+
+    domain_type *owner = domain_table_insert(db->domains, hostDomain, maxAnswer);//domain_table_find
+    if (owner == NULL) {
+       log_msg(LOG_ERR,"err can not find domian : %s\n", host);
+    }
+    rr_del->rdatas[rr_del->rdata_count].domain = owner;
+    ++rr_del->rdata_count;
+
+    const domain_name_st *dname = domain_name_parse((const char*)domian_name);
+    int ret = do_domaindata_delete(db, zo, dname, rr_del);
+    add_rdata_to_recyclebin(rr_del);
+    free(rr_del);
+    return ret;
+}
 
 int domaindata_a_insert(struct  domain_store *db,char *zone_name,char *domian_name, char * ip_addr, uint32_t ttl,uint32_t maxAnswer ){
 
@@ -373,7 +440,7 @@ int domaindata_a_insert(struct  domain_store *db,char *zone_name,char *domian_na
     rr_insert->rdata_count =1; 
 
     const domain_name_st* zname = domain_name_parse((const char*)zone_name);
-   const  domain_name_st* dname = domain_name_parse((const char*)domian_name);
+    const domain_name_st* dname = domain_name_parse((const char*)domian_name);
 
 	/* find zone to go with it, or create it */
 	zone_type * zo = domain_store_find_zone(db, zname);
@@ -388,8 +455,6 @@ int domaindata_a_insert(struct  domain_store *db,char *zone_name,char *domian_na
     return 0;
 
 }
-
-
 
 int domaindata_a_delete(struct  domain_store *db,char *zone_name,char *domian_name,char * ip_addr, uint32_t ttl){
 
@@ -428,6 +493,15 @@ int domaindata_update(struct  domain_store *db, struct domin_info_update* update
             return domaindata_a_delete(db,update->zone_name,update->domain_name,update->host,update->ttl);
          }else if (update->action == DOMAN_ACTION_ADD){
             return domaindata_a_insert(db,update->zone_name,update->domain_name,update->host,update->ttl,update->maxAnswer);
+         }else{
+            log_msg(LOG_ERR,"err action\n");
+            return -2;
+         }
+     }else if (update->type == TYPE_PTR){
+         if (update->action == DOMAN_ACTION_DEL){
+            return domaindata_ptr_delete(db,update->zone_name,update->domain_name,update->host,update->ttl,update->maxAnswer);
+         }else if (update->action == DOMAN_ACTION_ADD){
+            return domaindata_ptr_insert(db,update->zone_name,update->domain_name,update->host,update->ttl,update->maxAnswer);
          }else{
             log_msg(LOG_ERR,"err action\n");
             return -2;

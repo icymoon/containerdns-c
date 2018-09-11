@@ -78,10 +78,12 @@ void
 domain_table_deldomain(domain_store_type* db, domain_type* domain)
 {
 	while(domain_can_be_deleted(domain)) {
+		/* save parent */
+		domain_type * domain_temp = domain->parent;
 		/* delete it */
 		do_deldomain(db, domain);
-		/* test parent */
-		domain = domain->parent;
+		/* test parent in next loop */
+		domain = domain_temp;
 	}
 }
 

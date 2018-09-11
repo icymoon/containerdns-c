@@ -16,6 +16,12 @@
 #include <time.h>
 #include <stdint.h>
 #include <sys/socket.h>
+#include <net/if.h>
+#include <arpa/inet.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <linux/if_ether.h>
+
 struct rr;
 struct buffer;
 
@@ -59,5 +65,7 @@ ssize_t hex_pton(const char* src, uint8_t* target, size_t targsize);
  */
 int hexdigit_to_int(char ch);
 
+int linux_set_if_mac(const char *ifname, const unsigned char mac[ETH_ALEN]);
+int linux_set_if_ip(const char *ifname, const char *ip);
 
 #endif /* _UTIL_H_ */

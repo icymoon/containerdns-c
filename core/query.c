@@ -315,8 +315,10 @@ query_response(struct kdns * kdns, struct query *q)
 
 	answer_lookup_zone( kdns, q, &answer, exact, closest_match,closest_encloser);
 
-    encode_answer(q, &answer);
-    query_compressed_table_clear(q);
+    if (GET_RCODE(q->packet) != RCODE_REFUSE) {
+        encode_answer(q, &answer);
+        query_compressed_table_clear(q);
+    }
 }
 
 void
