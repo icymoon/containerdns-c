@@ -10,6 +10,8 @@
 #include "query.h"
 #include "dns-conf.h"
 #include "db_update.h"
+#include "view.h"
+
 
 #define MAX_CORES 64
 #define EDNS_MAX_MESSAGE_LEN 4096
@@ -32,9 +34,9 @@ static int dnsdata_prepare(struct kdns * kdns) {
     return 0;
 }
 
-static int  kdns_query_init(unsigned lcore_id,struct kdns * kdns) {
+static int  kdns_query_init(unsigned lcore_id) {
     queries[lcore_id] = query_create();
-    return 1;
+    return 0;
 }
 
 void write_pid(const char *pid_file)
@@ -110,14 +112,15 @@ int kdns_init(unsigned lcore_id) {
         log_msg(LOG_ERR,"server preparation failed,could not be started");
         return -1;
     }
-     kdns_query_init(lcore_id,lcore_kdns );
+    
+     kdns_query_init(lcore_id);
 
     return 0;
 }
 
 
 
-kdns_query_st * dns_packet_proess(struct rte_mbuf *pkt , int offset, int received) {
+kdns_query_st * dns_packet_proess(struct rte_mbuf *pkt , uint32_t sip,int offset, int received) {
     unsigned lcore_id = rte_lcore_id();
     char *rdata = NULL;
 
@@ -132,6 +135,11 @@ kdns_query_st * dns_packet_proess(struct rte_mbuf *pkt , int offset, int receive
     rdata = rte_pktmbuf_mtod_offset(pkt, char *, offset);
     query->packet->data = (uint8_t *)rdata;
     query->packet->position += received;
+    view_value_t* data = view_find(dpdk_dns[lcore_id].db->viewtree, (uint8_t *)&sip,32);
+    if (data != VIEW_NO_NODE){
+        snprintf(query->view_name,MAX_VIEW_NAME_LEN,"%s",data->view_name);
+    }
+   
     buffer_flip(query->packet);
 
     if(query_process(query, &dpdk_dns[lcore_id]) != QUERY_FAIL) {

@@ -79,7 +79,7 @@ void
 query_reset(kdns_query_st *q )
 {
     if (q->qname != NULL){
-        memset(q->qname,0,sizeof(domain_name_st)+ MAXDOMAINLEN);
+        memset(q->qname,0,sizeof(struct domain_name)+ MAXDOMAINLEN);
     }   
 	buffer_clear(q->packet);
 	q->qtype = 0;
@@ -90,6 +90,7 @@ query_reset(kdns_query_st *q )
         q->offset = 0;
 	q->cname_count = 0;
         q->maxMsgLen= UDP_MAX_MESSAGE_LEN;
+    memset(q->view_name,0,MAX_VIEW_NAME_LEN);
 }
 
 /*

@@ -14,6 +14,10 @@
 
 #define MAX_CORES 64
 
+#define DEFAULT_VIEW_NAME "no_info"
+#define MAX_VIEW_NAME_LEN 32
+
+
 /*  configuration and run-time variables */
 typedef struct kdns kdns_type;
 struct	kdns

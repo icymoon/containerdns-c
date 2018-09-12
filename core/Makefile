@@ -15,6 +15,7 @@ packet.c \
 query.c \
 radtree.c \
 util.c \
+view.c \
 zone.c 
 SYMLINK-y-include += buffer.h \
 dns.h \
@@ -24,6 +25,7 @@ packet.h \
 query.h \
 radtree.h \
 util.h \
+view.h \
 zone.h 
 
 

@@ -12,6 +12,8 @@
 #include "domain_update.h"
 #include "util.h"
 #include "netdev.h"
+#include "view_update.h"
+
 
 
 #define DOMAIN_HASH_SIZE  0x3FFFF
@@ -22,13 +24,15 @@
 #define DNS_STATUS_INIT    "init"
 #define DNS_STATUS_RUN     "running"
 
+extern struct kdns dpdk_dns[MAX_CORES];
+extern int tcp_domian_databd_update(struct domin_info_update* update);
+
 
 static char * kdns_status = NULL;
 
 static struct web_instance * dins ;
 static struct rte_ring *domian_msg_ring[MAX_CORES];
 
-extern struct kdns dpdk_dns[MAX_CORES];
 
 //record all the domain infos,we process it in master core.
 static struct domin_info_update *g_domian_hash_list[DOMAIN_HASH_SIZE + 1 ] ;
@@ -54,8 +58,11 @@ static inline struct domin_info_update * msg_copy(struct domin_info_update *src)
     dst->weight  = src->weight;
     dst->port    = src->port;
     dst->maxAnswer = src->maxAnswer;
+    dst->lb_mode    = src->lb_mode;
+    dst->lb_weight  = src->lb_weight;
 
     memcpy(dst->zone_name,src->zone_name,DB_MAX_NAME_LEN);
+    memcpy(dst->view_name,src->view_name,DB_MAX_NAME_LEN);
     memcpy(dst->host,src->host,DB_MAX_NAME_LEN);
     memcpy(dst->domain_name,src->domain_name,DB_MAX_NAME_LEN);
     return dst;  
@@ -330,6 +337,27 @@ static void* domaindata_parse(enum db_action   action,struct connection_info_str
         goto parse_err;
     }
     if (update->type == TYPE_A){
+            /* get view name  */
+           json_key = json_object_get(json_response, "viewName");
+           if (!json_key || !json_is_string(json_key))  {
+                memcpy(update->view_name, DEFAULT_VIEW_NAME, strlen(DEFAULT_VIEW_NAME)); 
+            }else{  
+                value = json_string_value(json_key);
+                snprintf(update->view_name, strlen(value)+1, "%s", value);
+            }
+            /* get lb info*/
+            json_key = json_object_get(json_response, "lbMode");
+            if (!json_key || !json_is_integer(json_key))  {
+                update->lb_mode = 0;
+            }else{  
+                update->lb_mode= json_integer_value(json_key);
+            }
+            json_key = json_object_get(json_response, "lbWeight");
+            if (!json_key || !json_is_integer(json_key))  {
+                update->lb_weight= 0;
+            }else{  
+                update->lb_weight= json_integer_value(json_key);
+            }
         /* get ip addr  */
            json_key = json_object_get(json_response, "host");
            if (!json_key || !json_is_string(json_key))  {
@@ -374,7 +402,7 @@ static void* domaindata_parse(enum db_action   action,struct connection_info_str
         }
         update->prio = json_integer_value(json_key);
 
-         /* get priority  */
+         /* get weight  */
         json_key = json_object_get(json_response, "weight");
         if (!json_key || !json_is_integer(json_key))  {
             log_msg(LOG_ERR,"weight does not exist or is not int!");
@@ -383,7 +411,7 @@ static void* domaindata_parse(enum db_action   action,struct connection_info_str
         }
         update->weight= json_integer_value(json_key);
 
-         /* get priority  */
+         /* get port  */
         json_key = json_object_get(json_response, "port");
         if (!json_key || !json_is_integer(json_key))  {
             log_msg(LOG_ERR,"port does not exist or is not int!");
@@ -438,9 +466,10 @@ static void* domains_get( __attribute__((unused)) struct connection_info_struct 
         while(domain_info){
             switch (domain_info->type){
                 case TYPE_A:
-                    value = json_pack("{s:s, s:s, s:s, s:s, s:i, s:i}", "type","A",
+                    value = json_pack("{s:s, s:s, s:s, s:s, s:s, s:i, s:i, s:i, s:i}", "type","A",
                     "domainName", domain_info->domain_name, "host", domain_info->host, "zoneName", domain_info->zone_name,
-                    "ttl", domain_info->ttl,"maxAnswer", domain_info->maxAnswer);
+                    "view",domain_info->view_name,"ttl", domain_info->ttl,"maxAnswer", domain_info->maxAnswer,
+                    "lbMode",domain_info->lb_mode,"lbWeight",domain_info->lb_weight);
                     break;    
                  case TYPE_PTR:
                     value = json_pack("{s:s, s:s, s:s, s:s, s:i, s:i}", "type","PTR",
@@ -515,9 +544,10 @@ static void* domain_get( __attribute__((unused)) struct connection_info_struct *
             strcmp(domain_info->domain_name,domain)==0){
               switch (domain_info->type){
                 case TYPE_A:
-                    value = json_pack("{s:s, s:s, s:s, s:s, s:i}", "type","A",
+                    value = json_pack("{s:s, s:s, s:s, s:s, s:s, s:i, s:i, s:i, s:i}", "type","A",
                     "domainName", domain_info->domain_name, "host", domain_info->host, "zoneName", domain_info->zone_name,
-                    "ttl", domain_info->ttl);
+                    "view",domain_info->view_name,"ttl", domain_info->ttl,"maxAnswer", domain_info->maxAnswer,
+                    "lbMode",domain_info->lb_mode,"lbWeight",domain_info->lb_weight);
                     break;    
                  case TYPE_PTR:
                     value = json_pack("{s:s, s:s, s:s, s:s, s:i}", "type","PTR",
@@ -664,6 +694,11 @@ void domian_info_exchange_run( int port){
 
     web_endpoint_add("GET","/kdns/statistics/get",dins,&statistics_get);
     web_endpoint_add("POST","/kdns/statistics/reset",dins,&statistics_reset);
+    
+    web_endpoint_add("POST","/kdns/view",dins,&view_post);
+    web_endpoint_add("GET","/kdns/view",dins,&view_get);
+    //web_endpoint_add("GET","/kdns/perview",dins,&domain_get);
+    web_endpoint_add("DELETE","/kdns/view",dins,&view_del);
     
     webserver_run(dins);
     return;   

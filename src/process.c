@@ -21,6 +21,9 @@
 
 #include "forward.h"
 #include "domain_update.h"
+#include "view_update.h"
+
+
 
 
 extern struct dns_config *g_dns_cfg;
@@ -106,7 +109,7 @@ int packet_l3_handle(struct rte_mbuf *pkt, struct netif_queue_conf *conf) {
             char * bufdata = rte_pktmbuf_mtod_offset(pkt, char*, udp_hdr_offset);
             memcpy(&flags_old,bufdata+2 , 2);
               
-            query = dns_packet_proess(pkt, udp_hdr_offset, received);
+            query = dns_packet_proess(pkt, ip_hdr_in->src_addr,udp_hdr_offset, received);
             int retLen = buffer_remaining(query->packet);
 
             if(GET_RCODE(query->packet) == RCODE_REFUSE ) {
@@ -127,7 +130,6 @@ int packet_l3_handle(struct rte_mbuf *pkt, struct netif_queue_conf *conf) {
                 pkt->l2_len = sizeof(struct ether_hdr);
                 pkt->vlan_tci  = ETHER_TYPE_IPv4;
                 pkt->l3_len = sizeof(struct ipv4_hdr);  
-                char * data = (char *)pkt->buf_addr;
                 
                 conf->tx_mbufs[conf->tx_len] = pkt;
                 conf->tx_len++;
@@ -258,8 +260,10 @@ int process_slave(__attribute__((unused)) void *arg) {
     struct netif_queue_conf *conf = netif_queue_conf_get(lcore_id);    
     printf("Starting core %u conf:  rx=%d, tx=%d \n", lcore_id,conf->rx_queue_id,conf->tx_queue_id);
     domain_msg_ring_create();
+    view_msg_ring_create();
     
     while (1){
+        view_msg_slave_process();
         doman_msg_slave_process();
         struct rte_mbuf *mbufs[NETIF_MAX_PKT_BURST] ={0};
         uint16_t rx_count;
@@ -308,13 +312,14 @@ int process_slave(__attribute__((unused)) void *arg) {
 void process_master(__attribute__((unused)) void *arg) {
     
      domain_msg_ring_create();
+     view_msg_ring_create();
 
      domian_info_exchange_run(g_dns_cfg->comm.web_port);
 
     while(1) {
         struct rte_mbuf *pkts_kni_rx[NETIF_MAX_PKT_BURST];
         unsigned pkt_num;
-
+        view_msg_master_process();
         doman_msg_master_process();
         uint16_t rx_count = dns_kni_dequeue(pkts_kni_rx,NETIF_MAX_PKT_BURST);
         if (rx_count == 0){

@@ -19,10 +19,10 @@ static rrset_type *  do_domaindata_insert(struct  domain_store *db,zone_type * z
     /* Do we have this type of rrset already? */
     rrset = domain_find_rrset(rr->owner, zo, rr->type);
     if (!rrset) {
-        rrset = (rrset_type *) xalloc(sizeof(rrset_type));
+        rrset = (rrset_type *) xalloc_zero(sizeof(rrset_type));
         rrset->zone = zo;
         rrset->rr_count = 1;
-        rrset->rrs = (rr_type *) xalloc(sizeof(rr_type));
+        rrset->rrs = (rr_type *) xalloc_zero(sizeof(rr_type));
         rrset->rrs[0] = *rr;
 
         /* Add it */
@@ -176,7 +176,8 @@ int domaindata_soa_insert(struct  domain_store *db,char *zone_name){
         return -1;		
 	}
 
-    rr_type * rr_insert =  (rr_type *) xalloc(sizeof(rr_type));
+    rr_type * rr_insert =  (rr_type *) xalloc_zero(sizeof(rr_type));
+
     rr_insert->klass      = CLASS_IN;
     rr_insert->type       = TYPE_SOA;
     rr_insert->rdata_count = 0;
@@ -219,7 +220,7 @@ int domaindata_srv_insert(struct  domain_store *db,char *zone_name,char *domian_
         return -1;		
 	}
 
-   rr_type * rr_insert =  (rr_type *) xalloc(sizeof(rr_type));
+   rr_type * rr_insert =  (rr_type *) xalloc_zero(sizeof(rr_type));
    rr_insert->klass      = CLASS_IN;
    rr_insert->type       = TYPE_SRV;
    rr_insert->ttl        = ttl;
@@ -271,7 +272,7 @@ uint16_t port, uint32_t ttl,uint32_t maxAnswer ){
         return -1;		
 	}
 
-   rr_type * rr_del=  (rr_type *) xalloc(sizeof(rr_type));
+   rr_type * rr_del=  (rr_type *) xalloc_zero(sizeof(rr_type));
    rr_del->klass      = CLASS_IN;
    rr_del->type       = TYPE_SRV;
    rr_del->ttl        = ttl;
@@ -318,7 +319,7 @@ int domaindata_cname_insert(struct  domain_store *db,char *zone_name,char *domia
         return -1;		
 	}
 
-   rr_type * rr_insert =  (rr_type *) xalloc(sizeof(rr_type));
+   rr_type * rr_insert =  (rr_type *) xalloc_zero(sizeof(rr_type));
    rr_insert->klass      = CLASS_IN;
    rr_insert->type       = TYPE_CNAME;
    rr_insert->ttl        = ttl;
@@ -339,9 +340,10 @@ int domaindata_cname_insert(struct  domain_store *db,char *zone_name,char *domia
     rrset_type *  rrset = do_domaindata_insert(db,zo,dname, rr_insert,maxAnswer);
         
     if (rrset != NULL){
-       
+        free (rr_insert);
         return 0;
     }
+    free (rr_insert);
 
     return -1;
 
@@ -371,7 +373,7 @@ int domaindata_ptr_insert(struct domain_store *db, char *zone_name, char *domian
         return -1;
     }
 
-    rr_type *rr_insert      = (rr_type *)xalloc(sizeof(rr_type));
+    rr_type *rr_insert      = (rr_type *)xalloc_zero(sizeof(rr_type));
     rr_insert->klass        = CLASS_IN;
     rr_insert->type         = TYPE_PTR;
     rr_insert->ttl          = ttl;
@@ -389,8 +391,10 @@ int domaindata_ptr_insert(struct domain_store *db, char *zone_name, char *domian
     const domain_name_st *dname = domain_name_parse((const char*)domian_name);
     rrset_type *rrset = do_domaindata_insert(db, zo, dname, rr_insert, maxAnswer);
     if (rrset != NULL) {
+        free (rr_insert);
         return 0;
     }
+    free (rr_insert);
 
     return -1;
 }
@@ -405,7 +409,7 @@ int domaindata_ptr_delete(struct domain_store *db, char *zone_name, char *domian
         return -1;
     }
 
-    rr_type *rr_del         = (rr_type *)xalloc(sizeof(rr_type));
+    rr_type *rr_del         = (rr_type *)xalloc_zero(sizeof(rr_type));
     rr_del->klass           = CLASS_IN;
     rr_del->type            = TYPE_PTR;
     rr_del->ttl             = ttl;
@@ -426,12 +430,13 @@ int domaindata_ptr_delete(struct domain_store *db, char *zone_name, char *domian
     return ret;
 }
 
-int domaindata_a_insert(struct  domain_store *db,char *zone_name,char *domian_name, char * ip_addr, uint32_t ttl,uint32_t maxAnswer ){
+int domaindata_a_insert(struct  domain_store *db,char *zone_name,char *domian_name, char*view_name, char * ip_addr, uint32_t ttl,uint32_t maxAnswer ){
 
-    rr_type * rr_insert =  (rr_type *) xalloc(sizeof(rr_type));
+    rr_type * rr_insert =  (rr_type *) xalloc_zero(sizeof(rr_type));
     rr_insert->klass      = CLASS_IN;
     rr_insert->type       = TYPE_A;
     rr_insert->ttl        = ttl;
+    snprintf(rr_insert->view_name, 32, "%s", view_name);
     
     rr_insert->rdatas =  xalloc_array_zero( MAXRDATALEN, sizeof(rdata_atom_type));
     uint16_t * dataA = zparser_conv_a(ip_addr);
@@ -450,18 +455,21 @@ int domaindata_a_insert(struct  domain_store *db,char *zone_name,char *domian_na
 	}
     rrset_type * rrset =  do_domaindata_insert(db,zo,dname, rr_insert,maxAnswer);
     if (rrset == NULL){
+        free (rr_insert);
         return -1;
     }
+    free (rr_insert);
     return 0;
 
 }
 
-int domaindata_a_delete(struct  domain_store *db,char *zone_name,char *domian_name,char * ip_addr, uint32_t ttl){
+int domaindata_a_delete(struct  domain_store *db,char *zone_name,char *domian_name,char* view_name,char * ip_addr, uint32_t ttl){
 
-    rr_type * rr_del =  (rr_type *) xalloc(sizeof(rr_type));
+    rr_type * rr_del =  (rr_type *) xalloc_zero(sizeof(rr_type));
     rr_del->klass      = CLASS_IN;
     rr_del->type       = TYPE_A;
     rr_del->ttl        = ttl;
+    snprintf(rr_del->view_name, 32, "%s", view_name);
     
     rr_del->rdatas =  xalloc_array_zero(MAXRDATALEN, sizeof(rdata_atom_type));
     uint16_t * dataA = zparser_conv_a(ip_addr);
@@ -476,6 +484,7 @@ int domaindata_a_delete(struct  domain_store *db,char *zone_name,char *domian_na
 	zone_type * zo = domain_store_find_zone(db, zname);
 	if(!zo) {
         log_msg(LOG_ERR," not find the zone\n");
+        free(rr_del);
         return -1;		
 	}
 
@@ -490,9 +499,9 @@ int domaindata_a_delete(struct  domain_store *db,char *zone_name,char *domian_na
 int domaindata_update(struct  domain_store *db, struct domin_info_update* update){
      if (update->type == TYPE_A){
          if (update->action == DOMAN_ACTION_DEL){
-            return domaindata_a_delete(db,update->zone_name,update->domain_name,update->host,update->ttl);
+            return domaindata_a_delete(db,update->zone_name,update->domain_name,update->view_name,update->host,update->ttl);
          }else if (update->action == DOMAN_ACTION_ADD){
-            return domaindata_a_insert(db,update->zone_name,update->domain_name,update->host,update->ttl,update->maxAnswer);
+            return domaindata_a_insert(db,update->zone_name,update->domain_name,update->view_name,update->host,update->ttl,update->maxAnswer);
          }else{
             log_msg(LOG_ERR,"err action\n");
             return -2;

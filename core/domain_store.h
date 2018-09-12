@@ -11,6 +11,8 @@
 
 #include <stdio.h>
 #include "dns.h"
+#include "kdns.h"
+
 #include "radtree.h"
 
 struct kdns;
@@ -47,6 +49,7 @@ typedef struct zone
 typedef struct rr {
 	struct domain *     owner;
 	union rdata_atom* rdatas;
+    char  view_name[MAX_VIEW_NAME_LEN];
 	uint32_t         ttl;
 	uint16_t         type;
 	uint16_t         klass;
@@ -85,6 +88,7 @@ typedef struct  domain_store
 {
 	struct domain_table* domains;
 	struct radtree*    zonetree;
+        struct view_tree *    viewtree;
 }domain_store_type;
 
 
