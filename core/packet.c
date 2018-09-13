@@ -96,6 +96,18 @@ packet_encode_rr(kdns_query_st *q, domain_type *owner, rr_type *rr, uint32_t ttl
 	}
 }
 
+
+static int ckeck_view_info(kdns_query_st *query, rr_type *rr)
+{
+    if ((strlen(query->view_name) == 0) || (strlen(rr->view_name) == 0)) {
+        return 0;
+    }
+    if (0 == strcmp(rr->view_name,DEFAULT_VIEW_NAME)){
+        return 0;
+    }
+    return strcmp(query->view_name,rr->view_name);
+}
+
 int
 packet_encode_rrset(kdns_query_st *query, domain_type *owner,
 		    rrset_type *rrset, int section )
@@ -123,6 +135,9 @@ packet_encode_rrset(kdns_query_st *query, domain_type *owner,
 		start = (uint16_t)(round_robin_off++ % rrset->rr_count);
 	else	start = 0;
 	for (i = start; i < rrset->rr_count && added < maxAnswer; ++i) {
+        if (ckeck_view_info(query,&rrset->rrs[i])){
+            continue;
+        }
 		if (packet_encode_rr(query, owner, &rrset->rrs[i],
 			rrset->rrs[i].ttl)) {
 			++added;
@@ -133,6 +148,9 @@ packet_encode_rrset(kdns_query_st *query, domain_type *owner,
 		}
 	}
 	for (i = 0; i < start && added < maxAnswer; ++i) {
+        if (ckeck_view_info(query,&rrset->rrs[i])){
+            continue;
+        }
 		if (packet_encode_rr(query, owner, &rrset->rrs[i],
 			rrset->rrs[i].ttl)) {
 			++added;

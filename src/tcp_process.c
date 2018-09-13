@@ -17,14 +17,20 @@
 #include "dns-conf.h"
 #include "kdns.h"
 #include "forward.h"
-
+#include "view_update.h"
 #include "db_update.h"
 #include "query.h"
+#include "kdns-adap.h"
 
 
 
 extern  struct dns_config *g_dns_cfg;
 extern void domain_store_zones_check_create(struct kdns*  kdns, char *zones);
+
+int tcp_domian_databd_update(struct domin_info_update* update);
+static int dns_handle_tcp_remote(int sndsock, char *snd_pkt,uint16_t old_id,int snd_len,char *domain);
+
+
 
 char host_name[64]={0};
 
@@ -61,7 +67,7 @@ static int dns_do_remote_tcp_query(int sock_fd,char *domain, char *snd_buf,ssize
 }
 
 
-int dns_handle_tcp_remote(int sndsock, char *snd_pkt,uint16_t old_id,int snd_len,char *domain){
+static int dns_handle_tcp_remote(int sndsock, char *snd_pkt,uint16_t old_id,int snd_len,char *domain){
 
     int sock_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (sock_fd == -1){      
@@ -181,6 +187,8 @@ static void *dns_tcp_process(void *arg) {
             query_tcp->packet->position += recv_len;
             buffer_flip(query_tcp->packet);
 
+            view_query_tcp(query_tcp, *(uint32_t *)&pin.sin_addr);
+
             if(query_process(query_tcp, &kdns_tcp) != QUERY_FAIL) {
                 buffer_flip(query_tcp->packet);
             }
@@ -204,7 +212,6 @@ static void *dns_tcp_process(void *arg) {
              }
  
             close(temp_sock_descriptor);  
-
     }   
 }  
 

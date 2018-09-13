@@ -33,6 +33,7 @@ typedef struct query {
 	uint16_t qtype;
 	uint16_t qclass;
     uint8_t opcode;
+    char view_name[MAX_VIEW_NAME_LEN];
     
 	zone_type *zone;
     
