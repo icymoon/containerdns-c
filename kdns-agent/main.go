@@ -308,7 +308,7 @@ func kdnsDomainOperation(ops *KdnsServerOps, zone string, record *ServiceRecord,
 		return nil
 	}
 	var s KdnsRecord
-	if record.Dnstype != "A" && record.Dnstype != "CNAME" && record.Dnstype != "SRV" {
+	if record.Dnstype != "A" && record.Dnstype != "PTR" && record.Dnstype != "CNAME" && record.Dnstype != "SRV" {
 		glog.Infof("Wrong type :%s\n", record.Dnstype)
 		return nil
 	}
