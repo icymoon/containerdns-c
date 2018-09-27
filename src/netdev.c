@@ -235,7 +235,7 @@ static int kni_alloc(uint8_t port_id)
 	master_kni = rte_kni_alloc(kni_mbuf_pool, &conf, &ops);
 	if (!master_kni){
 		log_msg(LOG_ERR,"Fail to create kni for port: %d\n", port_id);
-		exit(-1);
+		rte_exit(-1, "Fail to create kni for port: %d\n", port_id);
 	}
 
 	rte_eth_macaddr_get(port_id, &eth_addr);
@@ -244,7 +244,7 @@ static int kni_alloc(uint8_t port_id)
 		char mac[ETHER_ADDR_FMT_SIZE];
 		ether_format_addr(mac, ETHER_ADDR_FMT_SIZE, &eth_addr);
 		log_msg(LOG_ERR, "Fail to set mac %s for %s: %s\n", mac, conf.name, strerror(errno));
-		exit(-1);
+		rte_exit(-1, "Fail to set mac %s for %s: %s\n", mac, conf.name, strerror(errno));
 	}
 
 	return 0;
@@ -279,7 +279,8 @@ static void init_port(uint8_t port,uint16_t rx_rings, uint16_t tx_rings)
 	if (ret < 0){
 		log_msg(LOG_ERR, "Could not configure port%u (%d)\n",
 		            (unsigned)port, ret);
-        exit(-1);
+		rte_exit(-1,  "Could not configure port%u (%d)\n",
+		            (unsigned)port, ret);
     }
 
 	/* Allocate and set up 1 RX queue per Ethernet port. */
@@ -288,7 +289,7 @@ static void init_port(uint8_t port,uint16_t rx_rings, uint16_t tx_rings)
 				rte_eth_dev_socket_id(port), NULL, pkt_mbuf_pool);
 		if (ret < 0){
             log_msg(LOG_ERR,"rte_eth_rx_queue_setup err\n");
-			 exit(-1);
+		    rte_exit(-1, "rte_eth_rx_queue_setup err\n");
         }
 	}
 
@@ -298,7 +299,7 @@ static void init_port(uint8_t port,uint16_t rx_rings, uint16_t tx_rings)
 				rte_eth_dev_socket_id(port), NULL);
 		if (ret < 0){
             log_msg(LOG_ERR,"rte_eth_tx_queue_setup err\n");
-			exit(-1);
+		    rte_exit(-1, "rte_eth_tx_queue_setup err\n");
         }
 	}
 
@@ -307,7 +308,8 @@ static void init_port(uint8_t port,uint16_t rx_rings, uint16_t tx_rings)
 	if (ret < 0){
 		log_msg(LOG_ERR, "Could not start port%u (%d)\n",
 						(unsigned)port, ret);
-        exit(-1);
+		rte_exit(-1, "Could not start port%u (%d)\n",
+						(unsigned)port, ret);
     }
 	rte_eth_promiscuous_enable(port);
     
@@ -391,7 +393,7 @@ void dns_dpdk_init(void){
     }
     if (rte_eal_init(g_dns_cfg->dpdk.argc, dpdk_argv) < 0) {
         log_msg(LOG_ERR, "EAL init failed.\n");
-        exit(-1);
+        rte_exit(-1, "EAL init failed.\n");
     }
     uint8_t nb_sys_ports;
 
@@ -399,33 +401,33 @@ void dns_dpdk_init(void){
                 MBUF_CACHE_DEF, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
     if (pkt_mbuf_pool == NULL) {
         log_msg(LOG_ERR, "Could not initialise mbuf pool\n");
-        exit(-1);
+        rte_exit(-1, "Could not initialise mbuf pool\n");
     }
 
     kni_mbuf_pool = rte_pktmbuf_pool_create("kni_mbuf_pool", g_dns_cfg->netdev.kni_mbuf_num,
                 MBUF_CACHE_DEF, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
     if (!kni_mbuf_pool){
-        log_msg(LOG_ERR, "Fail to create pktmbuf_pool for kni.");
-        exit(-1);
+        log_msg(LOG_ERR, "Fail to create pktmbuf_pool for kni.\n");
+        rte_exit(-1, "Fail to create pktmbuf_pool for kni.\n");
     }
 
     master_kni_pkt_ring = rte_ring_create("master_kni_pkt_ring", KNI_RING_SIZE, rte_socket_id(), RING_F_SC_DEQ);
 
     if (master_kni_pkt_ring == NULL){
-        log_msg(LOG_ERR, "Could not initialise ring buf \n");
-        exit(-1);
+        log_msg(LOG_ERR, "Could not initialise ring buf.\n");
+        rte_exit(-1, "Could not initialise ring buf.\n");
     }
     
         /* Get number of ports found in scan */
     nb_sys_ports = rte_eth_dev_count();
     if (nb_sys_ports == 0){
-        log_msg(LOG_ERR, "No supported Ethernet device found\n");
-        exit(-1);
+        log_msg(LOG_ERR, "No supported Ethernet device found.\n");
+        rte_exit(-1, "No supported Ethernet device found.\n");
     }
     
     if (nb_sys_ports != 1){
         log_msg(LOG_ERR, "now just one port supported\n");
-        exit(-1);
+        rte_exit(-1, "now just one port supported\n");
     }
 
     rte_kni_init(nb_sys_ports);
